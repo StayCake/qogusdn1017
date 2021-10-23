@@ -22,7 +22,7 @@
 # ALTERNATIVELY, YOU CAN EDIT SCRIPT_CONFIG AT HOME DRIVE (~) TO PARTITION WITH MY CONFIGURATIONS.
 # I AM NOT RESPONSIBLE FOR ANY DAMAGE WITH THIS CONFIG.
 # 
-# MY CONFIGURATIONS (~~ means that there can be other characters inside, usually sd, sc.):
+# MY CONFIGURATIONS (~~ means that there can be other characters inside, usually sda, sdb.):
 # /dev/~~1 - EFI Partition, 512 MIB. - FAT32
 # /dev/~~2 - Linux Swap Partition, 4 GIB. - SWAP
 # /dev/~~3 - Linux Filesystem Partition, Allocates all remaining disk space. - ext4
