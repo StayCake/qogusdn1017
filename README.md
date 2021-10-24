@@ -75,7 +75,7 @@ rm -rf /etc/pacman.d/temp
 
 # Partitioning
 # TODO: MUST FIND SCRIPT_CONFIG AT HOME DRIVE (~) TO CHECK IF THE PARTITIONING IS SET TO TRUE.
-# TODO: But question the user first which disk name should be used.
+# TODO: But question the user first which disk name should be used. Or, Read available disks and prints them to check which disk should be used.
 # TODO: SETTINGS PARTITION TYPE (FAT32, EXT4)
 
 parted /dev/$DISKNAME mklabel gpt -s
