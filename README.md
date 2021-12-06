@@ -98,7 +98,7 @@ mount /dev/$DISKNAME$PARTNUM /mnt/boot
 pacman -Syu ; pacman -S ntp --noconfirm ; ntpd -q -g
 
 # Base Package Installation / Desktop Environment Installation
-pacstrap /mnt base linux linux-firmware nano vim dhcpcd networkmanager base-devel man-db man-pages texinfo dosfstools e2fsprogs git go plasma plasma-wayland-session sddm kde-applications
+pacstrap /mnt base linux linux-firmware nano vim dhcpcd base-devel man-db man-pages texinfo dosfstools e2fsprogs git go plasma plasma-wayland-session sddm kde-applications
 
 # genfstab
 genfstab -U /mnt >> /mnt/etc/fstab
