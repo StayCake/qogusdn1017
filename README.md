@@ -1,7 +1,6 @@
 ```shell
 #!/bin/bash
 # Hyeon's own Arch Linux Automatic Installation script
-# THIS SCRIPT IS NOT FINISHED YET!!!!!!!!!!!!
 #
 # Download this script...
 #
@@ -15,70 +14,238 @@
 #
 # This script is licensed under Do What The Fuck You Want To Public License v2.0.
 
-############# WARNING #############
-#
-# THIS SCRIPT DOES NOT PARTITION YOUR DRIVE. (INCLUDING FORMATTING.)
-# THERE ARE MANY EXCEPTIONAL CIRCUMSTANCES WHILE PARTITIONING, SO THIS SCRIPT WILL DIRECTLY MOUNT THE PARTITION.
-# ALTERNATIVELY, YOU CAN EDIT SCRIPT_CONFIG AT HOME DRIVE (~) TO PARTITION WITH MY CONFIGURATIONS.
-# I AM NOT RESPONSIBLE FOR ANY DAMAGE WITH THIS CONFIG.
-# 
-# MY CONFIGURATIONS (~~ means that there can be other characters inside, usually sda, sdb.):
-# /dev/~~1 - EFI Partition, 512 MIB. - FAT32
-# /dev/~~2 - Linux Swap Partition, 4 GIB. - SWAP
-# /dev/~~3 - Linux Filesystem Partition, Allocates all remaining disk space. - ext4
-#
 # Script was based on Jeon W. H.'s Arch Linux Install Guide: https://jeonwh.com/arch-install/ (Korean)
 # For starters, I highly recommend to check his guide.
-###################################
 
 # EFI Check
 
 if [ -d "/sys/firmware/efi/efivars" ]
 then
-    return
+    echo ""
 else
     echo "This computer is not in EFI Platform. Please check the EFI state and try again."
     exit
 fi
 
-# Configuring Mirrorlist / TODO: Own Mirrorlist Check
+clear
 
-rm -rf /etc/pacman.d/mirrorlist
-echo "Server = http://ftp.kaist.ac.kr/ArchLinux/\$repo/os/\$arch" >> /etc/pacman.d/mirrorlist
-echo "Server = https://ftp.kaist.ac.kr/ArchLinux/\$repo/os/\$arch" >> /etc/pacman.d/mirrorlist
-curl "https://archlinux.org/mirrorlist/?country=KR&protocol=http&protocol=https&ip_version=4" >> /etc/pacman.d/temp
-tail -n +7 /etc/pacman.d/temp >> /etc/pacman.d/mirrorlist
-sed -i '3,10s/.//' /etc/pacman.d/mirrorlist # To remove comment signification
-rm -rf /etc/pacman.d/temp
+# Configuring Mirrorlist
+
+echo "//////////MIRRORLIST//////////"
+
+read -r -p "Do you have your own mirrorlist? (y/n): " yn
+
+
+case $yn in
+            [Yy]* ) echo;;
+            [Nn]* ) rm -rf /etc/pacman.d/mirrorlist;
+                    echo "Server = http://ftp.kaist.ac.kr/ArchLinux/\$repo/os/\$arch" >> /etc/pacman.d/mirrorlist;
+                    echo "Server = https://ftp.kaist.ac.kr/ArchLinux/\$repo/os/\$arch" >> /etc/pacman.d/mirrorlist;
+                    curl "https://archlinux.org/mirrorlist/?country=KR&protocol=http&protocol=https&ip_version=4" >> /etc/pacman.d/temp;
+                    tail -n +7 /etc/pacman.d/temp >> /etc/pacman.d/mirrorlist;
+                    sed -i '3,10s/.//' /etc/pacman.d/mirrorlist; # To remove comment signification
+                    rm -rf /etc/pacman.d/temp;;
+            * ) echo "Please answer yes or no.";;
+  esac
+clear
 
 # Partitioning
 
-parted /dev/sda mklabel gpt -s
-parted /dev/sda mkpart primary 2048s 1050623s -s # FAT32
-parted /dev/sda mkpart primary 1050624s 9439231s -s
-parted /dev/sda mkpart primary 9439232s 100% -s # EXT4
+SKIPPARTITIONING=FALSE
+
+echo "//////////PARTITIONING//////////"
+echo "This is your block devices list:"
+lsblk
+echo ""
+
+echo "Choose your tool to partition with:"
+echo "1) cfdisk"
+echo "2) gdisk"
+echo "or, if you want to skip partitioning, please write \"skip\" (case-sensitive)"
+echo ""
+
+read -r -p "Write your favorite partition tool as a number: " parttool
+echo ""
+
+if [ "${parttool}" == "skip" ]; then
+    export SKIPPARTITIONING=TRUE
+elif [ "${parttool}" == "1" ]; then
+    echo ""
+elif [ "${parttool}" == "2" ]; then
+    echo ""
+else
+    echo "Please answer the question correctly."
+fi
+
+if [ $SKIPPARTITIONING == "FALSE" ]; then
+    read -r -p "Choose your disk to partition (PLEASE TYPE IT CLEARLY! ex: /dev/sda): " diskinput
+    if [ "${parttool}" == "1" ]; then
+        cfdisk "${diskinput}"
+    elif [ "${parttool}" == "2" ]; then
+        gdisk "${diskinput}"
+    fi
+else
+    echo "Please type your disk clearly, with no typos."
+    exit 1
+fi
+
+clear
 
 # Formatting / SWAP
-mkfs.vfat -F32 /dev/sda1
-mkswap /dev/sda2
-swapon /dev/sda2
-mkfs.ext4 -j /dev/sda3
+
+SKIPFORMATTING=FALSE
+
+echo "//////////FORMATTING//////////"
+
+  if [ $SKIPFORMATTING == "FALSE" ]; then
+    lsblk
+    echo "WARNING: IN THIS SECTION YOU NEED TO TYPE YOUR PARTITION ALL EXPLICITLY. PLEASE BE CAREFUL NOT TO MAKE ANY ERRORS."
+
+    read -r -p "Type your EFI Partition (ex: sda1): " efipart
+
+    if [ "$efipart" == "" ]; then
+        echo "Please answer the question correctly."
+    else
+        mkfs.vfat -F32 /dev/"$efipart"
+    fi
+
+    read -r -p "Type your SWAP Partition. If you don't have it, please enter \"skip\" (case-sensitive, ex: sda2): " swappart
+
+    if [ "$swappart" == "skip" ]; then
+      echo ""
+    elif [ "$swappart" == "" ]; then
+        echo "Please answer the question corretly."
+    else
+        mkswap /dev/"$swappart"
+        swapon /dev/"$swappart"
+    fi
+
+    read -r -p "Type your ROOT Partition (ex: sda3): " rootpart
+
+    if [ "$rootpart" == "" ]; then
+        echo "Please answer the question corretly."
+    else
+        mkfs.ext4 -j /dev/"$rootpart"
+    fi
+  else
+    echo ""
+fi
 
 # Mount
-mount /dev/sda3 /mnt
+
+mount /dev/"$rootpart" /mnt
 mkdir /mnt/boot
-mount /dev/sda1 /mnt/boot
+mount /dev/"$efipart" /mnt/boot
+
+clear
 
 # Time Congfiguration, using ntp
-pacman -Syu ; pacman -S ntp --noconfirm ; ntpd -q -g
+echo "//////////Time Configuration is automatically being processed...//////////"
+pacman -S ntp --noconfirm ; ntpd -q -g
 
-# Base Package Installation / Desktop Environment Installation
+hwclock --systohc --utc
+
+clear
+
+# Base Package Installation
+echo "//////////BASE PACKAGE INSTALLATION//////////"
+
+echo "These are the base packages are going to installed: \"base linux linux-firmware nano vim dhcpcd base-devel man-db man-pages texinfo dosfstools e2fsprogs git go\""
+echo "If you don't want something in this packages, remember the package name for a while and use \"pacman -R\" to remove them."
+echo "Base package installation setup will start in 15 seconds."
+sleep 15
+
 pacstrap /mnt base linux linux-firmware nano vim dhcpcd base-devel man-db man-pages texinfo dosfstools e2fsprogs git go
 
 # genfstab
 genfstab -U /mnt >> /mnt/etc/fstab
 
-# TODO: CHROOT AND CONFIGURE USER SETTINGS, BOOTLOADER AS GRUB. ENABLING SOME SERVICES AND EXIT THE SCRIPT.
+clear
 
-arch-chroot /mnt bash -c ""
+# USER CHROOT CONFIG
+
+echo "//////////User Configurations//////////"
+
+read -r -s -p "Please enter root password: " rootpwd
+
+if [ "$rootpwd" == "" ]
+then
+    echo "Please answer the question correctly."
+else
+    echo ""
+fi
+
+echo ""
+
+read -r -p "Please enter your locale (ex: en_US): " locconfig
+
+if [ "$locconfig" == "" ]
+then
+    echo "Please answer the question correctly."
+else
+    echo ""
+fi
+
+read -r -p "Please enter your hostname(ex: archcomputer): " host
+
+if [ "$host" == "" ]
+then
+    echo "Please answer the question correctly."
+else
+    echo ""
+fi
+
+read -r -p "Please enter your username: " username
+
+if [ "$username" == "" ]
+then
+    echo "Please answer the question correctly."
+else
+    echo ""
+fi
+
+read -r -s -p "Please enter ${username}'s password: " userpwd
+
+if [ "$userpwd" == "" ]
+then
+    echo "Please answer the question correctly."
+else
+    echo ""
+fi
+
+echo ""
+
+clear
+
+echo "As you know, you need to remember your Username, Password, and the root's password. Be sure to remember what you have entered right now!"
+echo "User configuration setup will start in 10 seconds."
+sleep 10
+
+clear
+
+arch-chroot /mnt bash -c "echo \"root:$rootpwd\" | chpasswd;
+                          echo \"$locconfig.UTF-8 UTF-8\" > /etc/locale.gen; locale-gen;
+                          echo \"$host\" > /etc/hostname;
+                          ln -sf /usr/share/zoneinfo/Asia/Seoul /etc/localtime;
+                          useradd -m -g users -G wheel -s /bin/bash \"$username\";
+                          echo \"$username:$userpwd\" | chpasswd;
+                          sed -i \"80 i $username ALL=(ALL) ALL\" /etc/sudoers;
+                          pacman -S grub efibootmgr --noconfirm; grub-install --target=x86_64-efi --efi-directory=/boot --bootloader-id=arch --recheck; grub-mkconfig -o /boot/grub/grub.cfg;
+                          systemctl enable dhcpcd"
+
+clear
+
+echo "Installation has successfully finished!"
+echo "If you press any key the computer will be rebooted."
+echo "Thank you for using my sciprt!"
+echo "-Hyeon"
+echo ""
+read -n 1 -s -r -p "(Press any key to reboot.)"
+
+read
+
+# So Long, and Thanks for all the fish.
+echo "So Long, and Thanks for all the fish."
+umount -lR /mnt
+reboot
 ```
